@@ -52,7 +52,7 @@ int main(void)
         2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6);
   }
 
-  int N = 1<<25;
+  int N = 1<<12;
   printf("N: %d\n", N);
   float *x, *y;
 
