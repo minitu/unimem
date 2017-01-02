@@ -11,7 +11,7 @@ inline void cudaAssert(cudaError_t code, const char *file, int line, bool abort=
   }
 }
 
-__global__ void saxpy(int n, float a, float *x, float *y)
+__global__ void addKernel(int n, float a, float *x, float *y)
 {
   // setup
   int total_thread_num = gridDim.x * blockDim.x;
@@ -27,17 +27,17 @@ __global__ void saxpy(int n, float a, float *x, float *y)
     start_index += leftover;
   }
 
-  // saxpy
+  // add
   for (int i = start_index; i < start_index + num_per_thread; i++) {
-    y[i] = a*x[i] + y[i];
+    y[i] = x[i] + a;
   }
 }
 
 int main(void)
 {
-  int nDevices;
-
+  /*
   // print GPU info
+  int nDevices;
   cudaGetDeviceCount(&nDevices);
   for (int i = 0; i < nDevices; i++) {
     cudaDeviceProp prop;
@@ -52,12 +52,16 @@ int main(void)
         2.0*prop.memoryClockRate*(prop.memoryBusWidth/8)/1.0e6);
   }
 
-  int N = 1<<12;
+  // set which GPU
+  cudaCheck(cudaSetDevice(0));
+  */
+
+  int N = 1<<10;
   printf("N: %d\n", N);
   float *x, *y;
 
   // start profiling
-  cudaCheck(cudaProfilerStart());
+  //cudaCheck(cudaProfilerStart());
 
   // allocate memory with UM
   printf("Allocating %d bytes each...\n", (size_t)N*sizeof(float));
@@ -73,7 +77,7 @@ int main(void)
 
   // kernel launch -> page fault (GPU)
   printf("Launching kernel...\n");
-  saxpy<<<min(1024, (N+255)/256), 256>>>(N, 2.0f, x, y); // watch out for grid size limit
+  addKernel<<<min(1024, (N+255)/256), 256>>>(N, 2.0f, x, y); // watch out for grid size limit
 
   // check for kernel launch error
   cudaCheck(cudaPeekAtLastError());
@@ -86,7 +90,7 @@ int main(void)
   printf("Checking error...\n");
   float maxError = 0.0f;
   for (int i = 0; i < N; i++)
-    maxError = max(maxError, abs(y[i]-4.0f));
+    maxError = max(maxError, abs(y[i]-3.0f));
   printf("Max error: %f\n", maxError);
 
   // free memory
@@ -96,5 +100,5 @@ int main(void)
 
   // end profiling
   printf("All done!\n");
-  cudaCheck(cudaProfilerStop());
+  //cudaCheck(cudaProfilerStop());
 }
